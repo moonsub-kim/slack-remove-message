@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/slack-go/slack"
 	"github.com/urfave/cli/v2"
@@ -51,7 +53,18 @@ func delete(ctx *cli.Context) error {
 
 func messageLog(logger *zap.Logger) func(m slack.SearchMessage) error {
 	return func(m slack.SearchMessage) error {
-		logger.Info("messsage_deleted", zap.Any("message", m))
+		ts, err := strconv.ParseFloat(m.Timestamp, 32)
+		if err != nil {
+			return err
+		}
+		logger.Info(
+			"messsage_deleted",
+			zap.Time("timestamp", time.Unix(int64(ts), int64(ts-float64(int64(ts)))*1000000000)),
+			zap.String("timestamp_raw", m.Timestamp),
+			zap.String("text", m.Text),
+			zap.String("channel", m.Channel.Name),
+			zap.String("channel_id", m.Channel.ID),
+		)
 		return nil
 	}
 }
