@@ -11,9 +11,10 @@ import (
 )
 
 type API struct {
-	logger  *zap.Logger
-	client  *slack.Client
-	limiter ratelimit.Limiter
+	logger    *zap.Logger
+	client    *slack.Client
+	limiter   ratelimit.Limiter
+	nonDryRun bool
 }
 
 func (api API) Delete(
@@ -21,7 +22,7 @@ func (api API) Delete(
 	msgHook func(m slack.SearchMessage) error,
 	fileHook func(m slack.File) error,
 ) error {
-	page := 0
+	page := 1
 	api.logger.Info("query", zap.Any("query", query))
 	for {
 		var msgs *slack.SearchMessages
@@ -63,6 +64,9 @@ func (api API) Delete(
 			if err != nil {
 				return err
 			}
+			if !api.nonDryRun {
+				continue
+			}
 
 			err = api.callAPIWithRate(
 				func() error {
@@ -85,6 +89,9 @@ func (api API) Delete(
 			err := fileHook(f)
 			if err != nil {
 				return err
+			}
+			if !api.nonDryRun {
+				continue
 			}
 
 			err = api.callAPIWithRate(

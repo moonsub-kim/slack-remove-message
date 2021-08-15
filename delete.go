@@ -14,6 +14,7 @@ import (
 
 var token string
 var query string
+var nonDryRun bool
 
 var deleteCommand = &cli.Command{
 	Name: "delete",
@@ -27,20 +28,36 @@ var deleteCommand = &cli.Command{
 			EnvVars:     []string{"SLACK_USER_TOKEN"},
 			Destination: &token,
 		},
+		&cli.BoolFlag{
+			Name:        "non_dry_run",
+			DefaultText: "false",
+			Destination: &nonDryRun,
+		},
 	},
 	Action: delete,
 }
 
 func delete(ctx *cli.Context) error {
 	logger := zapLogger()
+	logger.Info(
+		"options",
+		zap.Any("token", token),
+		zap.Any("query", query),
+		zap.Any("non_dry_run", nonDryRun),
+	)
+
 	api := API{
-		logger:  logger,
-		client:  slack.New(token),
-		limiter: ratelimit.New(30),
+		logger:    logger,
+		client:    slack.New(token),
+		limiter:   ratelimit.New(30),
+		nonDryRun: nonDryRun,
 	}
 
-	// Run 10 times to remove missing messages
-	for i := 0; i < 10; i++ {
+	times := 1
+	if nonDryRun {
+		times = 10 // Run 10 times to remove missing messages
+	}
+	for i := 0; i < times; i++ {
 		err := api.Delete(
 			fmt.Sprintf("%s from:me", query),
 			messageLog(logger),
