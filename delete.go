@@ -8,6 +8,7 @@ import (
 
 	"github.com/slack-go/slack"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/ratelimit"
 	"go.uber.org/zap"
 )
 
@@ -33,9 +34,9 @@ var deleteCommand = &cli.Command{
 func delete(ctx *cli.Context) error {
 	logger := zapLogger()
 	api := API{
-		logger:    logger,
-		client:    slack.New(token),
-		rateLimit: 30,
+		logger:  logger,
+		client:  slack.New(token),
+		limiter: ratelimit.New(30),
 	}
 
 	err := api.Delete(
@@ -44,7 +45,7 @@ func delete(ctx *cli.Context) error {
 		fileLog(logger),
 	)
 	if err != nil {
-		logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)))
+		logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)), zap.Stack("stack"))
 		return err
 	}
 
