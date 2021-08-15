@@ -73,6 +73,9 @@ func (api API) Delete(
 			if err != nil && strings.Contains(err.Error(), "not_found") {
 				api.logger.Info("already_removed", zap.Any("message", m.Text))
 				continue
+			} else if err != nil && strings.Contains(err.Error(), "cant_delete_message") {
+				api.logger.Info("unremovable_message", zap.Any("message", m.Text))
+				continue
 			} else if err != nil {
 				return err
 			}

@@ -39,14 +39,17 @@ func delete(ctx *cli.Context) error {
 		limiter: ratelimit.New(30),
 	}
 
-	err := api.Delete(
-		fmt.Sprintf("%s from:me", query),
-		messageLog(logger),
-		fileLog(logger),
-	)
-	if err != nil {
-		logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)), zap.Stack("stack"))
-		return err
+	// Run 10 times to remove missing messages
+	for i := 0; i < 10; i++ {
+		err := api.Delete(
+			fmt.Sprintf("%s from:me", query),
+			messageLog(logger),
+			fileLog(logger),
+		)
+		if err != nil {
+			logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)), zap.Stack("stack"))
+			return err
+		}
 	}
 
 	return nil
