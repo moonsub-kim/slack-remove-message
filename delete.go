@@ -11,7 +11,6 @@ import (
 
 var token string
 var query string
-var rateLimit int
 
 var deleteCommand = &cli.Command{
 	Name: "delete",
@@ -25,11 +24,6 @@ var deleteCommand = &cli.Command{
 			EnvVars:     []string{"SLACK_USER_TOKEN"},
 			Destination: &token,
 		},
-		&cli.IntFlag{
-			Name:        "rate_limit",
-			DefaultText: "30",
-			Destination: &rateLimit,
-		},
 	},
 	Action: delete,
 }
@@ -39,7 +33,7 @@ func delete(ctx *cli.Context) error {
 	api := API{
 		logger:    logger,
 		client:    slack.New(token),
-		rateLimit: rateLimit,
+		rateLimit: 30,
 	}
 
 	err := api.Delete(
