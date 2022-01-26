@@ -10,6 +10,7 @@ func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
 			deleteCommand,
+			deleteFilesCommand,
 		},
 	}
 	app.Run(os.Args)

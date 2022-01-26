@@ -17,6 +17,70 @@ type API struct {
 	nonDryRun bool
 }
 
+func (api API) DeleteFiles(
+	channel string,
+	user string,
+	fileHook func(m slack.File) error,
+) error {
+	api.logger.Info("arg", zap.Any("channel", user), zap.Any("channel", user))
+	params := &slack.ListFilesParameters{
+		Limit:   100,
+		User:    user,
+		Channel: channel,
+		Cursor:  "",
+	}
+	for {
+		var files []slack.File
+
+		search := func() error {
+			var err error
+			files, params, err = api.client.ListFiles(*params)
+			return err
+		}
+		err := api.callAPIWithRate(search)
+		if err != nil {
+			return err
+		} else if len(files) == 0 {
+			api.logger.Info("end")
+			return nil
+		}
+
+		api.logger.Info(
+			"file_list_result",
+			zap.Any("files", len(files)),
+			zap.Any("cursor", params.Cursor),
+		)
+
+		for _, f := range files {
+			if fileHook != nil {
+				err := fileHook(f)
+				if err != nil {
+					return err
+				}
+			}
+			if !api.nonDryRun {
+				continue
+			}
+
+			err = api.callAPIWithRate(
+				func() error {
+					return api.client.DeleteFile(f.ID)
+				},
+			)
+			if err != nil && strings.Contains(err.Error(), "not_found") {
+				api.logger.Info("already_removed", zap.Any("name", f.Name))
+				continue
+			} else if err != nil {
+				api.logger.Info("err", zap.Any("name", f.Name), zap.Any("id", f.ID), zap.Any("user", f.User), zap.Error(err))
+			}
+		}
+
+		if params.Cursor == "" {
+			return nil
+		}
+	}
+}
+
 func (api API) Delete(
 	query string,
 	msgHook func(m slack.SearchMessage) error,

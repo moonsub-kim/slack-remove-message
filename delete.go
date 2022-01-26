@@ -37,6 +37,34 @@ var deleteCommand = &cli.Command{
 	Action: delete,
 }
 
+var channel string
+var user string
+
+var deleteFilesCommand = &cli.Command{
+	Name: "delete-file",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:        "channel",
+			Destination: &channel,
+		},
+		&cli.StringFlag{
+			Name:        "user",
+			Destination: &user,
+		},
+		&cli.StringFlag{
+			Name:        "token",
+			EnvVars:     []string{"SLACK_USER_TOKEN"},
+			Destination: &token,
+		},
+		&cli.BoolFlag{
+			Name:        "non_dry_run",
+			DefaultText: "false",
+			Destination: &nonDryRun,
+		},
+	},
+	Action: deleteFile,
+}
+
 func delete(ctx *cli.Context) error {
 	logger := zapLogger()
 	logger.Info(
@@ -62,6 +90,41 @@ func delete(ctx *cli.Context) error {
 			fmt.Sprintf("%s from:me", query),
 			messageLog(logger),
 			fileLog(logger),
+		)
+		if err != nil {
+			logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)), zap.Stack("stack"))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func deleteFile(ctx *cli.Context) error {
+	logger := zapLogger()
+	logger.Info(
+		"deletefiles",
+		zap.Any("channel", channel),
+		zap.Any("user", user),
+		zap.Any("non_dry_run", nonDryRun),
+	)
+
+	api := API{
+		logger:    logger,
+		client:    slack.New(token),
+		limiter:   ratelimit.New(30),
+		nonDryRun: nonDryRun,
+	}
+
+	times := 1
+	if nonDryRun {
+		times = 10 // Run 10 times to remove missing messages
+	}
+	for i := 0; i < times; i++ {
+		err := api.DeleteFiles(
+			channel,
+			user,
+			nil,
 		)
 		if err != nil {
 			logger.Info("err", zap.Error(err), zap.Any("type", reflect.TypeOf(err)), zap.Stack("stack"))
