@@ -52,6 +52,9 @@ func (api API) DeleteFiles(
 		)
 
 		for _, f := range files {
+			if f.Created > 1640995200 {
+				continue
+			}
 			if fileHook != nil {
 				err := fileHook(f)
 				if err != nil {
